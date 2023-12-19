@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use std::fs;
 use rand::Rng;
+use std::io;
 
 fn reading(matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
     let input = fs::read_to_string("src/progres.txt")?;
@@ -189,17 +190,83 @@ fn generate_random(matrix:&mut [[i32;4];4]){
         matrix[i as usize][j as usize]=4;
     }
 }
-fn main() {
-    let mut matrix: [[i32; 4]; 4] = [[0; 4]; 4];
-    if let Err(err) = reading(&mut matrix) {
-        println!("Error: {:?}", err);
-        return;
+fn update_file(game_option:i32,matrix:&mut [[i32;4];4])->Result<(),anyhow::Error>{
+if game_option==0{
+    let mut content_to_write:String =String::from("0\n"); // Contents to write to the file
+    let mut i=0;
+    loop{
+        content_to_write.push('0');
+        i+=1;
+        if i==16{break;}
+        if i%4==0 {
+            content_to_write.push('\n');
+        }
+        else{
+            content_to_write.push(' ');
+        }
+    }
+    fs::write("src/progres.txt", content_to_write)?;
+}
+else{
+    let mut content_to_write = String::from("1\n");
+    for row in matrix.iter() {
+        for &elem in row.iter() {
+            content_to_write.push_str(&elem.to_string());
+            if content_to_write.matches(' ').count() % 4 == 3 {
+                content_to_write.push('\n');
+            }
+            else{
+            content_to_write.push(' ');
+            }
+        }
     }
 
-    // for row in matrix.iter_mut().take(4) {
-    //     for elem in row.iter_mut().take(4) {
-    //         print!("{:?} ", *elem);
-    //     }
-    //     println!();
-    // }
+    fs::write("src/progres.txt", content_to_write)?;
+
+}
+Ok(())
+}
+fn main() {
+    let mut matrix: [[i32; 4]; 4] = [[0; 4]; 4];
+
+    let mut input = String::new();
+    let mut read=false;
+    while !read{
+        println!("Press the key for an option: \n n => new game \n c => continue\n");
+    match io::stdin().read_line(&mut input) {
+        Ok(_) => {
+            if let Some(ch) = input.trim().chars().next() {
+                read=true;
+                if ch=='n' || ch=='N'{
+                    match update_file(0, &mut matrix) {
+                        Ok(_) => println!("File updated successfully"),
+                        Err(err) => eprintln!("Error updating file: {}", err),
+                    }
+                }
+                else if ch=='c' ||ch=='C' {
+                    if let Err(err) = reading(&mut matrix) {
+                        println!("Error: {:?}", err);
+                        return;
+                    }
+                }
+                else{
+                    read=false;
+                    println!("Wrong key");
+                }
+            } else {
+                println!("No character entered");
+            }
+        }
+        Err(error) => {
+            eprintln!("Error reading input: {}", error);
+        }
+    }
+    }
+
+    for row in matrix.iter_mut().take(4) {
+        for elem in row.iter_mut().take(4) {
+            print!("{:?} ", *elem);
+        }
+        println!();
+    }
 }
