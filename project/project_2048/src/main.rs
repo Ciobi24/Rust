@@ -1,6 +1,9 @@
 use anyhow::anyhow;
-use std::fs;
+use crossterm::event::{read, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::execute;
+use crossterm::terminal::{Clear, ClearType};
 use rand::Rng;
+use std::fs;
 use std::io;
 
 fn reading(matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
@@ -56,44 +59,42 @@ fn up(matrix: &mut [[i32; 4]; 4]) {
 fn down(matrix: &mut [[i32; 4]; 4]) {
     for j in 0..4 {
         let mut zero_count = 0;
-        let mut i=3;
-        loop{
+        let mut i = 3;
+        loop {
             if matrix[i][j] == 0 {
                 zero_count += 1;
             } else if zero_count > 0 {
                 matrix[i + zero_count][j] = matrix[i][j];
                 matrix[i][j] = 0;
             }
-            if i == 0_usize{
+            if i == 0_usize {
                 break;
             }
-            i-=1;
+            i -= 1;
         }
     }
     for j in 0..4 {
-        let mut i=3;
+        let mut i = 3;
         loop {
             if matrix[i][j] == matrix[i - 1][j] {
                 matrix[i][j] += matrix[i - 1][j];
-                let mut k=i-1;
+                let mut k = i - 1;
                 loop {
-                    if k==0{
+                    if k == 0 {
                         break;
                     }
                     matrix[k][j] = matrix[k - 1][j];
-                    k-=1;
+                    k -= 1;
                 }
                 matrix[0][j] = 0_i32;
             }
-            if i==1{
+            if i == 1 {
                 break;
             }
-            i-=1;
+            i -= 1;
         }
     }
 }
-
-
 
 fn left(matrix: &mut [[i32; 4]; 4]) {
     for row in matrix.iter_mut().take(4) {
@@ -115,13 +116,12 @@ fn left(matrix: &mut [[i32; 4]; 4]) {
         }
     }
 
-
     for row in matrix.iter_mut().take(4) {
         for j in 0..3 {
-            if row[j] == row[j+1] {
-                row[j] += row[j+1];
+            if row[j] == row[j + 1] {
+                row[j] += row[j + 1];
                 for k in (j + 1)..3 {
-                    row[k] = row[k+1];
+                    row[k] = row[k + 1];
                 }
                 row[3] = 0_i32;
             }
@@ -131,142 +131,408 @@ fn left(matrix: &mut [[i32; 4]; 4]) {
 fn right(matrix: &mut [[i32; 4]; 4]) {
     for row in matrix.iter_mut().take(4) {
         let mut zero_count = 0;
-        let mut j=3;
+        let mut j = 3;
         loop {
             if row[j] == 0 {
                 zero_count += 1;
             } else if zero_count > 0 {
-                row[j+zero_count] = row[j];
+                row[j + zero_count] = row[j];
                 row[j] = 0;
             }
-            if j==0{break;}
-            j-=1;
+            if j == 0 {
+                break;
+            }
+            j -= 1;
         }
     }
     for row in matrix.iter_mut().take(4) {
-        let mut j=3;
+        let mut j = 3;
         loop {
-            if j==0{
+            if j == 0 {
                 break;
             }
-            if row[j] == row[j-1] {
-                row[j] += row[j-1];
-                let mut k=j-1;
+            if row[j] == row[j - 1] {
+                row[j] += row[j - 1];
+                let mut k = j - 1;
                 loop {
-                    if k==0{
+                    if k == 0 {
                         break;
                     }
-                    row[k] = row[k-1];
-                    k-=1;
+                    row[k] = row[k - 1];
+                    k -= 1;
                 }
                 row[0] = 0_i32;
             }
-            j-=1;
+            j -= 1;
         }
     }
 }
-fn generate_random(matrix:&mut [[i32;4];4]){
+fn generate_random(matrix: &mut [[i32; 4]; 4]) {
     let mut rng = rand::thread_rng();
     let rand_num: f64 = rng.gen(); // Generate a random floating-point number between 0 and 1
-    let mut empty_place=0;
-    let mut list:Vec<i32>=Vec::new();
+    let mut empty_place = 0;
+    let mut list: Vec<i32> = Vec::new();
     for row in matrix.iter_mut().take(4) {
         for elem in row.iter_mut().take(4) {
-            empty_place+=1;
-            if *elem==0{
+            empty_place += 1;
+            if *elem == 0 {
                 list.push(empty_place);
             }
         }
     }
     let mut rng = rand::thread_rng();
     let index = rng.gen_range(0..list.len()); // Generate a random index within the list's bounds
-    let i=(list[index]-1)/4;
-    let j=(list[index]-1)%4;
+    let i = (list[index] - 1) / 4;
+    let j = (list[index] - 1) % 4;
     if rand_num < 0.9 {
         // 90% chance for generating 2
-        matrix[i as usize][j as usize]=2;
+        matrix[i as usize][j as usize] = 2;
     } else {
         // 10% chance for generating 4
-        matrix[i as usize][j as usize]=4;
+        matrix[i as usize][j as usize] = 4;
     }
 }
-fn update_file(game_option:i32,matrix:&mut [[i32;4];4])->Result<(),anyhow::Error>{
-if game_option==0{
-    let mut content_to_write:String =String::from("0\n"); // Contents to write to the file
-    let mut i=0;
-    loop{
-        content_to_write.push('0');
-        i+=1;
-        if i==16{break;}
-        if i%4==0 {
-            content_to_write.push('\n');
-        }
-        else{
-            content_to_write.push(' ');
-        }
-    }
-    fs::write("src/progres.txt", content_to_write)?;
-}
-else{
-    let mut content_to_write = String::from("1\n");
-    for row in matrix.iter() {
-        for &elem in row.iter() {
-            content_to_write.push_str(&elem.to_string());
-            if content_to_write.matches(' ').count() % 4 == 3 {
+fn update_file(game_option: i32, matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
+    if game_option == 0 {
+        let mut content_to_write: String = String::from("0\n"); // Contents to write to the file
+        let mut i = 0;
+        loop {
+            content_to_write.push('0');
+            i += 1;
+            if i == 16 {
+                break;
+            }
+            if i % 4 == 0 {
                 content_to_write.push('\n');
-            }
-            else{
-            content_to_write.push(' ');
-            }
-        }
-    }
-
-    fs::write("src/progres.txt", content_to_write)?;
-
-}
-Ok(())
-}
-fn main() {
-    let mut matrix: [[i32; 4]; 4] = [[0; 4]; 4];
-
-    let mut input = String::new();
-    let mut read=false;
-    while !read{
-        println!("Press the key for an option: \n n => new game \n c => continue\n");
-    match io::stdin().read_line(&mut input) {
-        Ok(_) => {
-            if let Some(ch) = input.trim().chars().next() {
-                read=true;
-                if ch=='n' || ch=='N'{
-                    match update_file(0, &mut matrix) {
-                        Ok(_) => println!("File updated successfully"),
-                        Err(err) => eprintln!("Error updating file: {}", err),
-                    }
-                }
-                else if ch=='c' ||ch=='C' {
-                    if let Err(err) = reading(&mut matrix) {
-                        println!("Error: {:?}", err);
-                        return;
-                    }
-                }
-                else{
-                    read=false;
-                    println!("Wrong key");
-                }
             } else {
-                println!("No character entered");
+                content_to_write.push(' ');
             }
         }
-        Err(error) => {
-            eprintln!("Error reading input: {}", error);
+        fs::write("src/progres.txt", content_to_write)?;
+    } else {
+        let mut content_to_write = String::from("1\n");
+        let mut i = 0;
+        for row in matrix.iter() {
+            for &elem in row.iter() {
+                content_to_write.push_str(&elem.to_string());
+                i += 1;
+                if i % 4 == 0 {
+                    content_to_write.push('\n');
+                } else {
+                    content_to_write.push(' ');
+                }
+            }
+        }
+
+        fs::write("src/progres.txt", content_to_write)?;
+    }
+    Ok(())
+}
+fn game_start(matrix: &mut [[i32; 4]; 4]) {
+    let mut input = String::new();
+    let mut read = false;
+    while !read {
+        println!("Press the key for an option: \n n => new game \n c => continue\n");
+        match io::stdin().read_line(&mut input) {
+            Ok(_) => {
+                if let Some(ch) = input.trim().chars().next() {
+                    read = true;
+                    if ch == 'n' || ch == 'N' {
+                        generate_random(matrix);
+                        generate_random(matrix);
+                        match update_file(1, matrix) {
+                            Ok(_) => {}
+                            Err(err) => {
+                                eprintln!("Error updating file: {}", err);
+                                return;
+                            }
+                        }
+                    } else if ch == 'c' || ch == 'C' {
+                        if let Err(err) = reading(matrix) {
+                            println!("Error: {:?}", err);
+                            return;
+                        }
+                    } else {
+                        read = false;
+                        println!("Wrong key");
+                    }
+                } else {
+                    println!("No character entered");
+                }
+            }
+            Err(error) => {
+                eprintln!("Error reading input: {}", error);
+                return;
+            }
         }
     }
-    }
-
+}
+fn print_instructions() {
+    println!("Use the arrows, one at a time. Press esc to exit.\nTry to sum the numbers up to 2048.\n   Good luck!");
+}
+fn print_matrix(matrix: &mut [[i32; 4]; 4]) {
     for row in matrix.iter_mut().take(4) {
         for elem in row.iter_mut().take(4) {
-            print!("{:?} ", *elem);
+            print!(" {:?} ", *elem);
         }
         println!();
     }
+}
+fn clear_screen() {
+    execute!(std::io::stdout(), Clear(ClearType::All)).expect("Failed to clear screen");
+}
+fn check(matrix: &mut [[i32; 4]; 4]) -> bool {
+
+}
+fn game_logic(matrix: &mut [[i32; 4]; 4]) {
+    loop {
+        print_matrix(matrix);
+        let input = read();
+        match input {
+            Ok(event) => {
+                if let crossterm::event::Event::Key(KeyEvent {
+                    code, modifiers, ..
+                }) = event
+                {
+                    if modifiers == KeyModifiers::NONE {
+                        match code {
+                            KeyCode::Up => {
+                                println!("Up arrow pressed");
+                                clear_screen();
+                                up(matrix);
+                                let mut space = false;
+                                let mut win = false;
+                                for row in matrix.iter_mut().take(4) {
+                                    for elem in row.iter_mut().take(4) {
+                                        if *elem == 0 {
+                                            space = true;
+                                        }
+                                        if *elem == 2048 {
+                                            win = true;
+                                        }
+                                    }
+                                }
+                                if win {
+                                    clear_screen();
+                                    print_matrix(matrix);
+                                    println!("\n     ----YOU WON! GOOD JOB!----");
+                                    match update_file(0, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                                if space {
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                } else if !check(matrix)
+                                 {
+                                    println!("\n    ----GAME OVER----");
+                                    *matrix = [[0; 4]; 4];
+                                    generate_random(matrix);
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            KeyCode::Down => {
+                                println!("Down arrow pressed");
+                                clear_screen();
+                                down(matrix);
+                                let mut space = false;
+                                let mut win = false;
+                                for row in matrix.iter_mut().take(4) {
+                                    for elem in row.iter_mut().take(4) {
+                                        if *elem == 0 {
+                                            space = true;
+                                        }
+                                        if *elem == 2048 {
+                                            win = true;
+                                        }
+                                    }
+                                }
+                                if win {
+                                    clear_screen();
+                                    print_matrix(matrix);
+                                    println!("\n     ----YOU WON! GOOD JOB!----");
+                                    match update_file(0, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                                if space {
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                } else if !check(matrix){
+                                    println!("\n    ----GAME OVER----");
+                                    *matrix = [[0; 4]; 4];
+                                    generate_random(matrix);
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                            }
+                            KeyCode::Left => {
+                                println!("Left arrow pressed");
+                                clear_screen();
+                                left(matrix);
+                                let mut space = false;
+                                let mut win = false;
+                                for row in matrix.iter_mut().take(4) {
+                                    for elem in row.iter_mut().take(4) {
+                                        if *elem == 0 {
+                                            space = true;
+                                        }
+                                        if *elem == 2048 {
+                                            win = true;
+                                        }
+                                    }
+                                }
+                                if win {
+                                    clear_screen();
+                                    print_matrix(matrix);
+                                    println!("\n     ----YOU WON! GOOD JOB!----");
+                                    match update_file(0, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                                if space {
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                } else if !check(matrix) {
+                                    println!("\n    ----GAME OVER----");
+                                    *matrix = [[0; 4]; 4];
+                                    generate_random(matrix);
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            KeyCode::Right => {
+                                println!("Right arrow pressed");
+                                clear_screen();
+                                right(matrix);
+                                let mut space = false;
+                                let mut win = false;
+                                for row in matrix.iter_mut().take(4) {
+                                    for elem in row.iter_mut().take(4) {
+                                        if *elem == 0 {
+                                            space = true;
+                                        }
+                                        if *elem == 2048 {
+                                            win = true;
+                                        }
+                                    }
+                                }
+                                if space {
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                } else if !check(matrix) {
+                                    println!("\n    ----GAME OVER----");
+                                    *matrix = [[0; 4]; 4];
+                                    generate_random(matrix);
+                                    generate_random(matrix);
+                                    match update_file(1, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                                if win {
+                                    clear_screen();
+                                    print_matrix(matrix);
+                                    println!("\n     ----YOU WON! GOOD JOB!----");
+                                    match update_file(0, matrix) {
+                                        Ok(_) => {}
+                                        Err(err) => {
+                                            eprintln!("Error updating file: {}", err);
+                                            return;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            KeyCode::Esc => {
+                                // Handle Escape key press
+                                clear_screen();
+                                println!("Escape key pressed");
+                                println!("\n     ---Exit game...");
+                                break;
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                eprintln!("Error reading input");
+                break;
+            }
+        }
+    }
+}
+
+fn main() {
+    let mut matrix: [[i32; 4]; 4] = [[0; 4]; 4];
+    game_start(&mut matrix);
+    print_instructions();
+    game_logic(&mut matrix);
 }
