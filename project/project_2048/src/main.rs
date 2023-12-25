@@ -5,6 +5,8 @@ use crossterm::terminal::{Clear, ClearType};
 use rand::Rng;
 use std::fs;
 use std::io;
+use prettytable::{Table, Row, Cell};
+use prettytable::format;
 
 fn reading(matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
     let input = fs::read_to_string("src/progres.txt")?;
@@ -270,20 +272,66 @@ fn game_start(matrix: &mut [[i32; 4]; 4]) {
 fn print_instructions() {
     println!("Use the arrows, one at a time. Press esc to exit.\nTry to sum the numbers up to 2048.\n   Good luck!");
 }
+
+
 fn print_matrix(matrix: &mut [[i32; 4]; 4]) {
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+
     for row in matrix.iter_mut().take(4) {
+        let mut row_data = Vec::new();
         for elem in row.iter_mut().take(4) {
-            print!(" {:?} ", *elem);
+            let color_code = match *elem {
+                2 => "\x1b[31m",     // Red
+                4 => "\x1b[32m",     // Green
+                8 => "\x1b[33m",     // Yellow
+                16 => "\x1b[34m",    // Blue
+                32 => "\x1b[35m",    // Magenta
+                64 => "\x1b[36m",    // Cyan
+                128 => "\x1b[95m",   // Bright Magenta
+                256 => "\x1b[91m",   // Bright Red
+                512 => "\x1b[92m",   // Bright Green
+                1024 => "\x1b[93m",  // Bright Yellow
+                2048 => "\x1b[94m",  // Bright Blue
+                _ => "\x1b[0m",      // Reset
+            };
+            row_data.push(Cell::new(&format!("{} {:?} \x1b[0m", color_code, *elem)));
         }
-        println!();
+        table.add_row(Row::new(row_data));
     }
+    table.printstd();
 }
+
 fn clear_screen() {
     execute!(std::io::stdout(), Clear(ClearType::All)).expect("Failed to clear screen");
 }
-fn check(matrix: &mut [[i32; 4]; 4]) -> bool {
+fn check(matrix: &[[i32; 4]; 4]) -> bool {
+    let mut copy = [[0; 4]; 4]; 
+    
+    for i in 0..4 {
+        for j in 0..4 {
+            copy[i][j] = matrix[i][j];
+        }
+    }
 
+    up(&mut copy);
+    down(&mut copy);
+    left(&mut copy);
+    right(&mut copy);
+
+
+    for i in 0..4 {
+        for j in 0..4 {
+            if matrix[i][j] != copy[i][j] {
+                return true;
+            }
+        }
+    }
+    false
 }
+
+
+
 fn game_logic(matrix: &mut [[i32; 4]; 4]) {
     loop {
         print_matrix(matrix);
