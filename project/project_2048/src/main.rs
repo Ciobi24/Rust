@@ -24,6 +24,8 @@ fn reading(matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
                     if let Some(number_str) = numbers.next() {
                         if let Ok(number) = number_str.parse::<i32>() {
                             *elem = number;
+                        }else {
+                            return Err(anyhow!("Error parsing number"));
                         }
                     }
                 }
