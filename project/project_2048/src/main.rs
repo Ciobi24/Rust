@@ -11,7 +11,11 @@ use prettytable::format;
 fn reading(matrix: &mut [[i32; 4]; 4]) -> Result<(), anyhow::Error> {
     let input = fs::read_to_string("src/progres.txt")?;
     let mut line_iter = input.lines();
-    let flag_str = line_iter.next().unwrap_or_default(); // If file is empty, use default empty string
+    let flag_str = match line_iter.next() {
+        Some(value) => value.to_string(),
+        None => "".to_string(), 
+    };
+    
     let flag: i32 = match flag_str.parse::<i32>() {
         Ok(value) => value,
         Err(_) => return Err(anyhow!("Error parsing flag")),
@@ -304,9 +308,13 @@ fn print_matrix(matrix: &mut [[i32; 4]; 4]) {
     table.printstd();
 }
 
-fn clear_screen() {
-    execute!(std::io::stdout(), Clear(ClearType::All)).expect("Failed to clear screen");
+fn clear_screen() -> Result<(), anyhow::Error> {
+    match execute!(std::io::stdout(), Clear(ClearType::All)) {
+        Ok(_) => Ok(()),
+        Err(err) => Err(anyhow::Error::new(err)),
+    }
 }
+
 fn check(matrix: &[[i32; 4]; 4]) -> bool {
     let mut copy = [[0; 4]; 4]; 
     
@@ -348,7 +356,12 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                         match code {
                             KeyCode::Up => {
                                 println!("Up arrow pressed");
-                                clear_screen();
+                                match clear_screen() {
+                                    Ok(_) => { /* Clear screen successfully */ }
+                                    Err(err) => {
+                                        eprintln!("Failed to clear screen: {}", err);
+                                    }
+                                }                                
                                 up(matrix);
                                 let mut space = false;
                                 let mut win = false;
@@ -363,7 +376,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                                     }
                                 }
                                 if win {
-                                    clear_screen();
+                                    match clear_screen() {
+                                        Ok(_) => { /* Clear screen successfully */ }
+                                        Err(err) => {
+                                            eprintln!("Failed to clear screen: {}", err);
+                                        }
+                                    }
+                                    
                                     print_matrix(matrix);
                                     println!("\n     ----YOU WON! GOOD JOB!----");
                                     match update_file(0, matrix) {
@@ -402,7 +421,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                             }
                             KeyCode::Down => {
                                 println!("Down arrow pressed");
-                                clear_screen();
+                                match clear_screen() {
+                                    Ok(_) => { /* Clear screen successfully */ }
+                                    Err(err) => {
+                                        eprintln!("Failed to clear screen: {}", err);
+                                    }
+                                }
+                                
                                 down(matrix);
                                 let mut space = false;
                                 let mut win = false;
@@ -417,7 +442,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                                     }
                                 }
                                 if win {
-                                    clear_screen();
+                                    match clear_screen() {
+                                        Ok(_) => { /* Clear screen successfully */ }
+                                        Err(err) => {
+                                            eprintln!("Failed to clear screen: {}", err);
+                                        }
+                                    }
+                                    
                                     print_matrix(matrix);
                                     println!("\n     ----YOU WON! GOOD JOB!----");
                                     match update_file(0, matrix) {
@@ -456,7 +487,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                             }
                             KeyCode::Left => {
                                 println!("Left arrow pressed");
-                                clear_screen();
+                                match clear_screen() {
+                                    Ok(_) => { /* Clear screen successfully */ }
+                                    Err(err) => {
+                                        eprintln!("Failed to clear screen: {}", err);
+                                    }
+                                }
+                                
                                 left(matrix);
                                 let mut space = false;
                                 let mut win = false;
@@ -471,7 +508,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                                     }
                                 }
                                 if win {
-                                    clear_screen();
+                                    match clear_screen() {
+                                        Ok(_) => { /* Clear screen successfully */ }
+                                        Err(err) => {
+                                            eprintln!("Failed to clear screen: {}", err);
+                                        }
+                                    }
+                                    
                                     print_matrix(matrix);
                                     println!("\n     ----YOU WON! GOOD JOB!----");
                                     match update_file(0, matrix) {
@@ -509,7 +552,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                             }
                             KeyCode::Right => {
                                 println!("Right arrow pressed");
-                                clear_screen();
+                                match clear_screen() {
+                                    Ok(_) => { /* Clear screen successfully */ }
+                                    Err(err) => {
+                                        eprintln!("Failed to clear screen: {}", err);
+                                    }
+                                }
+                                
                                 right(matrix);
                                 let mut space = false;
                                 let mut win = false;
@@ -547,7 +596,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                                     break;
                                 }
                                 if win {
-                                    clear_screen();
+                                    match clear_screen() {
+                                        Ok(_) => { /* Clear screen successfully */ }
+                                        Err(err) => {
+                                            eprintln!("Failed to clear screen: {}", err);
+                                        }
+                                    }
+                                    
                                     print_matrix(matrix);
                                     println!("\n     ----YOU WON! GOOD JOB!----");
                                     match update_file(0, matrix) {
@@ -562,7 +617,13 @@ fn game_logic(matrix: &mut [[i32; 4]; 4]) {
                             }
                             KeyCode::Esc => {
                                 // Handle Escape key press
-                                clear_screen();
+                                match clear_screen() {
+                                    Ok(_) => { /* Clear screen successfully */ }
+                                    Err(err) => {
+                                        eprintln!("Failed to clear screen: {}", err);
+                                    }
+                                }
+                                
                                 println!("Escape key pressed");
                                 println!("\n     ---Exit game...");
                                 break;
